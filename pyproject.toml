@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-ACGalaxy"
-version = "0.8.2"
+version = "1.0.1"
 description = "Collect exhibition information for display and retrieval"
 authors = [{ name = "shiran", email = "zxh08300@gmail.com" }]
 dependencies = [

@@ -58,3 +58,26 @@ async def capture_element_screenshot(html_content, ele="#app", width=625, device
         await browser.close()
 
         return screenshot
+
+
+async def get_guest_list(key):
+    url = f"{bash_url}/guests"
+    data = {
+        "guest_name": key
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=data)
+        data = response.json()
+    return data.get("data")
+
+
+async def get_guest_acg_list(guest_id) -> list:
+    url = f"{bash_url}/guest/{guest_id}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        data = response.json()
+    guest_data = data["data"]["projects"]
+    for item in guest_data:
+        item["guest"] = data["data"]["guest"]
+    return guest_data

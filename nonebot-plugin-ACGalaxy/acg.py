@@ -5,13 +5,43 @@ import time
 from arclet.alconna import Alconna, Args
 from nonebot import get_driver
 from nonebot_plugin_alconna import UniMessage, on_alconna, AlconnaMatcher
-from .utils import get_acg_list, get_acg_info, capture_element_screenshot, get_coordinate_url
+from .utils import get_acg_list, get_acg_info, capture_element_screenshot, get_coordinate_url, get_guest_list, \
+    get_guest_acg_list
 
 driver = get_driver()
-acg_calendar = on_alconna(Alconna("漫展日历", Args["city?", str]))
-acg_coordinate = on_alconna(Alconna("漫展位置", Args["acgId?", str]))
-acg_info = on_alconna(Alconna("漫展详情", Args["acgId?", str]))
-acg_search = on_alconna(Alconna("漫展检索", Args["key?", str]))
+acg_calendar = on_alconna(
+    Alconna("漫展日历", Args["city?", str]),
+    aliases={"日历", "展会日历"},
+    block=True,
+    priority=11,
+)
+acg_coordinate = on_alconna(
+    Alconna("漫展位置", Args["acgId?", str]),
+    aliases={"位置信息", "位置"},
+    block=True,
+    priority=11,
+)
+acg_info = on_alconna(Alconna(
+    "漫展详情", Args["acgId?", str]),
+    aliases={"展会详情", "漫展信息", "展会详情"},
+    block=True,
+    priority=11,
+)
+acg_search = on_alconna(
+    Alconna("漫展检索", Args["key?", str]),
+    aliases={"展会检索", "检索", "漫展查询"},
+    block=True,
+    priority=11,
+)
+acg_guest = on_alconna(
+    Alconna("嘉宾检索", Args["guest?", str]),
+    aliases={"嘉宾查询", "嘉宾搜索", "查询嘉宾"},
+    block=True,
+    priority=11,
+)
+
+script_path = os.path.abspath(__file__)
+script_directory = os.path.dirname(script_path)
 
 
 @acg_calendar.handle()
@@ -21,7 +51,7 @@ async def acg_calendar_h(matcher: AlconnaMatcher, city: str):
 @acg_calendar.got_path("city", prompt="请输入城市")
 async def acg_calendar_g(city: str):
     acg_list = await get_acg_list(city_name=city, count=100, order="time")
-    print(acg_list)
+    # print(acg_list)
     start_time = ""
     acg_data = {}
     for acg in acg_list.get("data"):
@@ -33,8 +63,6 @@ async def acg_calendar_g(city: str):
         acg_data[start_time].append(acg)
     if not acg_data:
         acg_calendar.finish("未找到相关漫展信息")
-    script_path = os.path.abspath(__file__)
-    script_directory = os.path.dirname(script_path)
     with open(os.path.join(script_directory, "templates/acg_list_times.html"), "r", encoding="utf-8") as fp:
         html_content = fp.read().replace("@@acg_list@@", json.dumps(acg_data))
     img_data = await capture_element_screenshot(html_content)
@@ -86,9 +114,33 @@ async def acg_search_g(key: str):
     if acg_list.get("count") == 0:
         acg_search.finish("未找到相关漫展信息")
     msg = f"找到结果 {acg_list.get('count')} 条\n"
-    script_path = os.path.abspath(__file__)
-    script_directory = os.path.dirname(script_path)
     with open(os.path.join(script_directory, "templates/acg_list.html"), "r", encoding="utf-8") as fp:
         html_content = fp.read().replace("@@acg_list@@", json.dumps(acg_list.get("data")))
     img_data = await capture_element_screenshot(html_content)
     await acg_search.finish(msg + UniMessage.image(raw=img_data))
+    
+
+@acg_guest.handle()
+async def acg_guest_h(matcher: AlconnaMatcher, guest: str):
+    matcher.set_path_arg("guest", guest)
+    
+
+@acg_guest.got_path("guest", prompt="请输入嘉宾CN")
+async def acg_guest_g(guest: str):
+    guest_list = await get_guest_list(guest)
+    guest_acg_list = []
+    if len(guest_list) == 0:
+        acg_guest.finish("未找到相关嘉宾信息")
+        return
+    for guest in guest_list:
+        guest_acg = await get_guest_acg_list(guest.get("id"))
+        guest_acg_list += guest_acg
+    msg = f"找到相关嘉宾 {len(guest_list)} 条\n找到相关漫展 {len(guest_acg_list)} 条\n"
+    print(json.dumps(guest_acg_list, indent=4, ensure_ascii=False))
+    print(json.dumps(guest_list, indent=4, ensure_ascii=False))
+    with open(os.path.join(script_directory, "templates/acg_list_guest.html"), "r", encoding="utf-8") as fp:
+        html_content = fp.read().replace("@@acg_list@@", json.dumps(guest_acg_list)).replace("@@guest_list@@",
+                                                                                           json.dumps(guest_list))
+    img_data = await capture_element_screenshot(html_content)
+    await acg_search.finish(msg + UniMessage.image(raw=img_data))
+    

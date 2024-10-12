@@ -136,8 +136,6 @@ async def acg_guest_g(guest: str):
         guest_acg = await get_guest_acg_list(guest.get("id"))
         guest_acg_list += guest_acg
     msg = f"找到相关嘉宾 {len(guest_list)} 条\n找到相关漫展 {len(guest_acg_list)} 条\n"
-    print(json.dumps(guest_acg_list, indent=4, ensure_ascii=False))
-    print(json.dumps(guest_list, indent=4, ensure_ascii=False))
     with open(os.path.join(script_directory, "templates/acg_list_guest.html"), "r", encoding="utf-8") as fp:
         html_content = fp.read().replace("@@acg_list@@", json.dumps(guest_acg_list)).replace("@@guest_list@@",
                                                                                            json.dumps(guest_list))
